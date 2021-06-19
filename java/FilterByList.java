@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
+
 import org.apache.hadoop.io.Text;
 
 
@@ -21,48 +21,54 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 
+public class FilterByList  {
 
-public class TagSplit  {
+    private static class ListMapper extends Mapper<Object, Text, Text ,Text> {
 
-    private static class SplitMapper extends Mapper<Object, Text, IntTextWritable , DoubleWritable> {
-
-        private IntTextWritable outKey = new IntTextWritable ();
-        private DoubleWritable outValue = new DoubleWritable ();
+        private Text outKey = new  Text ();
+        private Text outValue = new  Text ();
  
 
 
          @Override 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             StringTokenizer itr = new StringTokenizer(value.toString());
-            int year=Integer.parseInt(itr.nextToken());
-            String Tags=itr.nextToken();
-            double res=Double.parseDouble(itr.nextToken());
-            outValue.set(res);
- 
-            String[] tags=Tags.substring(4,Tags.length()-4).split("&gt;&lt;");
-            for(String tag: tags){
-                outKey.set(year, tag);
-                context.write(outKey,outValue);
-                     
-            }
+            String year=itr.nextToken();
+            String tag=itr.nextToken();
+            String res=itr.nextToken();
+            
+            outKey.set(tag);
+            outValue.set(year+" "+res);
+            context.write(outKey,outValue);
 	 
         }
     }
 
-    private static class DoubSumReducer extends Reducer<IntTextWritable, DoubleWritable, IntTextWritable , DoubleWritable> {
+    private static class FilterReducer extends Reducer<Text, Text, Text , Text> {
 
-        private DoubleWritable result = new DoubleWritable();
+         
     
-        public void reduce(IntTextWritable key, Iterable<DoubleWritable> values, Context context)
+        public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
-            double sum = 0;
-            for (DoubleWritable val : values) {
-                sum += val.get();
+            List<String> texts = new ArrayList<>();
+            boolean flag = false;
+            for (Text value: values) {
+                texts.add(value.toString());
+                StringTokenizer itr = new StringTokenizer(value.toString());
+                if("2020".equals(itr.nextToken())){
+                    flag=true;
+                }
             }
-            result.set(sum);
-            context.write(key, result);
+            if(flag){
+                for (String text: texts) {
+                    context.write(key, new Text(text));
+                }
+            }
+
         }
 
     }
@@ -70,17 +76,16 @@ public class TagSplit  {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "TagSplit");
-        job.setJarByClass(TagSplit.class);
-        job.setMapperClass(SplitMapper.class);
-        job.setCombinerClass(DoubSumReducer.class);
-        job.setReducerClass(DoubSumReducer.class);
+        Job job = Job.getInstance(conf, "FilterByList");
+        job.setJarByClass(FilterByList.class);
+        job.setMapperClass( ListMapper.class);
+        job.setReducerClass( FilterReducer .class);
 
 
         // Тип ключа на выходе
-        job.setOutputKeyClass(IntTextWritable.class);
+        job.setOutputKeyClass(Text.class);
         // Тип значения на выходе
-        job.setOutputValueClass(DoubleWritable.class);
+        job.setOutputValueClass(Text.class);
         // Путь к файлу на вход
         FileInputFormat.addInputPath(job, new Path(args[0]));
         // Путь к файлу на выход (куда запишутся результаты)

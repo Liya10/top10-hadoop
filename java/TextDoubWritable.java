@@ -6,7 +6,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.Text;
 
 import java.io.IOException;
-
+import java.io.DataInput;
+import java.io.DataOutput;
 /**
  * Simple xml parsing utilities.
  */
@@ -18,30 +19,34 @@ public class TextDoubWritable implements Writable {
 
 
     public TextDoubWritable(){
-        year = new IntWritable();
         tag = new Text();
+        res = new DoubleWritable();
 
     }
 
-    public TextDoubWritable(int y, String t){
-        year = new IntWritable(y);
+    public TextDoubWritable( String t, double r){
         tag = new Text(t);
+        res = new DoubleWritable(r);
 
+    }
+    public void set(String t, double r){
+        tag.set(t);
+        res.set(r); 
     }
     @Override
     public String toString() {
-        return year.toString()+" "+tag.toString();
+        return tag.toString()+" "+res.toString();
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        year.readFields(in);
         tag.readFields(in);
+	res.readFields(in);
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-        year.write(out);
         tag.write(out);
+        res.write(out);
     }
 }

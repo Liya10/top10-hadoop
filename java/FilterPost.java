@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 
-import org.apache.hadoop.io.LongWritable;
+
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -22,10 +22,10 @@ import java.util.Map;
 
 public class FilterPost  {
 
-    private static class TokenizerMapper extends Mapper<Object, Text, IntWritable, Text> {
+    private static class TokenizerMapper extends Mapper<Object, Text, IntWritable, TextDoubWritable> {
 
         private IntWritable outKey = new IntWritable();
-        private Text outValue = new Text();
+        private TextDoubWritable outValue = new TextDoubWritable();
         private StringBuilder buffer = new StringBuilder(250);
 
 
@@ -38,7 +38,7 @@ public class FilterPost  {
 
 	 if("1".equals(row.get("PostTypeId"))){
 	     int ViewCount=Integer.parseInt(row.get("ViewCount"));
-	     if(ViewCount>=100000){
+	     if(ViewCount>=50000){
 
        
 	         int year=Integer.parseInt(row.get("CreationDate").substring(0,4));
@@ -46,14 +46,10 @@ public class FilterPost  {
 	         int Score = Integer.parseInt(row.get("Score"));
 	         int AnswerCount = Integer.parseInt(row.get("AnswerCount"));
 	         String Tags=row.get("Tags");
-                 double result= (double) ViewCount/10000+ (double)Score/100+ (double)AnswerCount/20;
+                 double result= (double) ViewCount/10000  + (double)Score/100+ (double)AnswerCount/20;
 
-                 buffer.setLength(0);
-	         buffer.append(Tags);
-                 buffer.append('\01');
-	         buffer.append(Double.toString(result));
-                 buffer.append('\01');
-                 outValue.set(buffer.toString());
+            
+                 outValue.set(Tags, result);
                  context.write(outKey,outValue);
 	     }
 	 }
@@ -73,7 +69,7 @@ public class FilterPost  {
         // Тип ключа на выходе
         job.setOutputKeyClass(IntWritable.class);
         // Тип значения на выходе
-        job.setOutputValueClass(Text.class);
+        job.setOutputValueClass(TextDoubleWritable.class);
         // Путь к файлу на вход
         FileInputFormat.addInputPath(job, new Path(args[0]));
         // Путь к файлу на выход (куда запишутся результаты)
