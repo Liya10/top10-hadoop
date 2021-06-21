@@ -3,12 +3,13 @@ package ru.mai.dep806.bigdata.mr;
 
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 
 
@@ -25,49 +26,57 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class FilterByList  {
+public class CoefByTag{
 
-    private static class ListMapper extends Mapper<Object, Text, Text ,Text> {
-
+    private static class GroupMapper extends Mapper<Object, Text, Text , Text> {
         private Text outKey = new  Text ();
         private Text outValue = new  Text ();
- 
-
-
          @Override 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             StringTokenizer itr = new StringTokenizer(value.toString());
-            String year=itr.nextToken();
+
             String tag=itr.nextToken();
-            String res=itr.nextToken();
+            int year=Integer.parseInt(itr.nextToken());
+            double res=Double.parseDouble(itr.nextToken());
             
-            outKey.set(tag);
-            outValue.set(year+" "+res);
-            context.write(outKey,outValue);
+    
+            double b = (double)(year-2008);
+            double a = b*b;
+            double c = b*res;
+            double d = 1.;
+            double e = res;                          
+            String abcde=Double.toString(a)+" "+Double.toString(b)+" "+Double.toString(c)+" "+Double.toString(d)+" "+Double.toString(e);    
+
+             outKey.set(tag);
+            outValue.set(abcde);
+            context.write(new  Text (tag),new Text(abcde));
 	 
         }
     }
 
-    private static class FilterReducer extends Reducer<Text, Text, Text , Text> {
+    private static class SumReducer extends Reducer<Text, Text, Text ,Text> {
 
-         
-    
+        private Text outValue = new  Text ();
         public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
-            List<String> texts = new ArrayList<>();
-            boolean flag = false;
+            double a_sum=0, b_sum=0,c_sum=0, d_sum=0, e_sum=0;  
+   
             for (Text value: values) {
-                texts.add(value.toString());
                 StringTokenizer itr = new StringTokenizer(value.toString());
-                if("2020".equals(itr.nextToken())){
-                    flag=true;
-                }
+                a_sum+=Double.parseDouble(itr.nextToken());
+                b_sum+=Double.parseDouble(itr.nextToken());
+                c_sum+=Double.parseDouble(itr.nextToken());
+                d_sum+=Double.parseDouble(itr.nextToken());
+                e_sum+=Double.parseDouble(itr.nextToken());
+             }
+             if(d_sum>1){
+
+                 //String res=Double.toString(a_sum)+" "+Double.toString(b_sum)+" "+Double.toString(c_sum)+" "+Double.toString(d_sum)+" "+Double.toString(e_sum);    
+                                double res = (c_sum*d_sum-b_sum*e_sum)/ (a_sum*d_sum-b_sum*b_sum)*13+ (a_sum*e_sum-b_sum*c_sum)/ (a_sum*d_sum-b_sum*b_sum);
+                 outValue.set(Double.toString(res));
+                 context.write(key, outValue);
             }
-            if(flag){
-                for (String text: texts) {
-                    context.write(key, new Text(text));
-                }
-            }
+
 
         }
 
@@ -77,10 +86,10 @@ public class FilterByList  {
     public static void main(String[] args) throws Exception {
         final long then = System.nanoTime();
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "FilterByList");
-        job.setJarByClass(FilterByList.class);
-        job.setMapperClass( ListMapper.class);
-        job.setReducerClass( FilterReducer .class);
+        Job job = Job.getInstance(conf, "CoefByTag");
+        job.setJarByClass(CoefByTag.class);
+        job.setMapperClass( GroupMapper.class);
+        job.setReducerClass( SumReducer.class);
 
 
         // Тип ключа на выходе
@@ -96,8 +105,7 @@ public class FilterByList  {
         boolean success = job.waitForCompletion(true);
 
         final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
-        System.out.println("MapReduce Time: " + millis); // = something around 1000.
-
+        System.out.println("MapReduce Time: " + millis); 
         System.exit(success ? 0 : 1);
     }
 }

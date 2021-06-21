@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-
+import java.util.concurrent.TimeUnit ;
 
 public class TagSplit  {
 
@@ -69,6 +69,7 @@ public class TagSplit  {
 
 
     public static void main(String[] args) throws Exception {
+        final long then = System.nanoTime();
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "TagSplit");
         job.setJarByClass(TagSplit.class);
@@ -88,6 +89,12 @@ public class TagSplit  {
 
         // Запускаем джобу и ждем окончания ее выполнения
         boolean success = job.waitForCompletion(true);
+
+
+        final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
+        System.out.println("MapReduce Time: " + millis); // = something around 1000.
+
+
         System.exit(success ? 0 : 1);
     }
 }

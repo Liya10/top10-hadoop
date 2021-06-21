@@ -3,6 +3,7 @@ package ru.mai.dep806.bigdata.mr;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.lang3.StringUtils;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -18,6 +19,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+
 
 
 public class FilterPost  {
@@ -59,6 +62,7 @@ public class FilterPost  {
 
 
     public static void main(String[] args) throws Exception {
+        final long then = System.nanoTime();
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "Filter Post by PostTypeId and ViewCount");
         job.setJarByClass(FilterPost.class);
@@ -69,14 +73,17 @@ public class FilterPost  {
         // Тип ключа на выходе
         job.setOutputKeyClass(IntWritable.class);
         // Тип значения на выходе
-        job.setOutputValueClass(TextDoubleWritable.class);
+        job.setOutputValueClass(TextDoubWritable.class);
         // Путь к файлу на вход
         FileInputFormat.addInputPath(job, new Path(args[0]));
         // Путь к файлу на выход (куда запишутся результаты)
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-        // Запускаем джобу и ждем окончания ее выполнения
         boolean success = job.waitForCompletion(true);
+
+        final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
+        System.out.println("MapReduce Time: " + millis); 
+
+
         System.exit(success ? 0 : 1);
     }
 }
